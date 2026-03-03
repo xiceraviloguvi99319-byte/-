@@ -15,6 +15,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      ALIYUN_HOST: ${{ secrets.ALIYUN_HOST || '118.178.143.33' }}
+      ALIYUN_PORT: ${{ secrets.ALIYUN_PORT || '22' }}
+      ALIYUN_USER: ${{ secrets.ALIYUN_USER || 'root' }}
+      ALIYUN_TARGET_DIR: ${{ secrets.ALIYUN_TARGET_DIR || '/var/www/turtle-talents' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,9 +33,6 @@ jobs:
         run: npm run build:h5
 
       - name: Add target host to known_hosts
-        env:
-          ALIYUN_HOST: ${{ secrets.ALIYUN_HOST }}
-          ALIYUN_PORT: ${{ secrets.ALIYUN_PORT }}
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -p "${ALIYUN_PORT:-22}" -H "${ALIYUN_HOST}" >> ~/.ssh/known_hosts
@@ -40,10 +42,10 @@ jobs:
         with:
           switches: -avzr --delete
           path: dist/
-          remote_path: ${{ secrets.ALIYUN_TARGET_DIR }}/current/
-          remote_host: ${{ secrets.ALIYUN_HOST }}
-          remote_user: ${{ secrets.ALIYUN_USER }}
-          remote_port: ${{ secrets.ALIYUN_PORT }}
+          remote_path: ${{ env.ALIYUN_TARGET_DIR }}/current/
+          remote_host: ${{ env.ALIYUN_HOST }}
+          remote_user: ${{ env.ALIYUN_USER }}
+          remote_port: ${{ env.ALIYUN_PORT }}
           remote_key: ${{ secrets.ALIYUN_SSH_KEY }}
 
       - name: Optional post-deploy command
@@ -51,10 +53,10 @@ jobs:
         env:
           POST_DEPLOY_CMD: ${{ secrets.ALIYUN_POST_DEPLOY_CMD }}
         with:
-          host: ${{ secrets.ALIYUN_HOST }}
-          username: ${{ secrets.ALIYUN_USER }}
+          host: ${{ env.ALIYUN_HOST }}
+          username: ${{ env.ALIYUN_USER }}
           key: ${{ secrets.ALIYUN_SSH_KEY }}
-          port: ${{ secrets.ALIYUN_PORT }}
+          port: ${{ env.ALIYUN_PORT }}
           script: |
             if [ -n "${POST_DEPLOY_CMD}" ]; then
               eval "${POST_DEPLOY_CMD}"
