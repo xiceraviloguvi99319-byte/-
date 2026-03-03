@@ -1,0 +1,19 @@
+{
+  "appid": "touristappid",
+  "projectname": "乌龟服天赋",
+  "compileType": "miniprogram",
+  "miniprogramRoot": ".",
+  "simulatorType": "wechat",
+  "libVersion": "trial",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "urlCheck": false,
+    "coverView": true,
+    "showShadowRootInWxmlPanel": true,
+    "ignoreUploadUnusedFiles": true
+  },
+  "condition": {}
+}

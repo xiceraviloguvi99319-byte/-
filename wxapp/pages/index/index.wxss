@@ -1,0 +1,170 @@
+.page {
+  padding: 24rpx;
+  padding-bottom: 40rpx;
+}
+
+.header {
+  margin-bottom: 20rpx;
+}
+
+.title {
+  display: block;
+  font-size: 42rpx;
+  font-weight: 700;
+  color: #f9d673;
+}
+
+.subtitle {
+  display: block;
+  margin-top: 8rpx;
+  color: #cbd5ff;
+  font-size: 28rpx;
+}
+
+.class-scroll {
+  white-space: nowrap;
+  margin-bottom: 12rpx;
+}
+
+.class-row {
+  display: inline-flex;
+  gap: 14rpx;
+  padding-bottom: 8rpx;
+}
+
+.class-item {
+  width: 130rpx;
+  padding: 12rpx 8rpx;
+  border-radius: 14rpx;
+  border: 2rpx solid #39415f;
+  background: #141b33;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.class-item.active {
+  border-color: #f9d673;
+  background: #1f294b;
+}
+
+.class-icon {
+  width: 64rpx;
+  height: 64rpx;
+}
+
+.class-name {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #e7ebff;
+}
+
+.current-class {
+  font-size: 32rpx;
+  font-weight: 700;
+  margin-bottom: 8rpx;
+}
+
+.help {
+  font-size: 22rpx;
+  color: #9faad8;
+  margin-bottom: 18rpx;
+}
+
+.trees {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.tree-card {
+  border-radius: 16rpx;
+  border: 2rpx solid #303960;
+  background: #111834;
+  padding: 14rpx;
+}
+
+.tree-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.tree-icon {
+  width: 50rpx;
+  height: 50rpx;
+  margin-right: 10rpx;
+}
+
+.tree-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-name {
+  font-size: 28rpx;
+  color: #f4f7ff;
+  font-weight: 600;
+}
+
+.tree-points {
+  font-size: 22rpx;
+  color: #f9d673;
+}
+
+.talent-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10rpx;
+  min-height: 640rpx;
+}
+
+.talent {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10rpx;
+  border: 2rpx solid #4b567f;
+  background: #1c2444;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.talent-icon {
+  width: 100%;
+  height: 100%;
+}
+
+.talent-rank {
+  position: absolute;
+  right: 4rpx;
+  bottom: 4rpx;
+  font-size: 18rpx;
+  line-height: 1;
+  color: #a8f194;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4rpx 6rpx;
+  border-radius: 6rpx;
+}
+
+.talent.available {
+  border-color: #78a5ff;
+}
+
+.talent.locked {
+  opacity: 0.55;
+  border-color: #4a4a5c;
+}
+
+.talent.active {
+  border-color: #59d971;
+}
+
+.talent.maxed {
+  border-color: #f9d673;
+}
+
+.talent.maxed .talent-rank {
+  color: #f9d673;
+}

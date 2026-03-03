@@ -1,0 +1,14 @@
+{
+  "pages": [
+    "wxapp/pages/index/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "乌龟服天赋",
+    "navigationBarBackgroundColor": "#111827",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0b1020",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

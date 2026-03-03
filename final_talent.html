@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>测试天赋模拟器</title>
+    <style>
+        body { font-family: Arial; background: #1a1a2e; color: #fff; padding: 20px; }
+        h1 { color: #ffd700; }
+        .btn { padding: 10px 20px; margin: 5px; cursor: pointer; background: #333; color: #fff; border: 1px solid #555; }
+        .btn:hover { background: #444; }
+        .tree { background: #252540; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .talent-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .talent { width: 64px; height: 64px; background: #333; border: 2px solid #555; border-radius: 8px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; cursor: pointer; }
+        .talent:hover { border-color: #ffd700; }
+        .talent.allocated { border-color: #4CAF50; }
+        .talent.unavailable { opacity: 0.4; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>🏆 魔兽世界乌龟服 1.18 天赋模拟器</h1>
+    
+    <div id="classSelector"></div>
+    <div id="calculator" style="display:none">
+        <h2 id="className"></h2>
+        <p>剩余点数: <span id="pointsLeft">51</span></p>
+        <div id="treesContainer"></div>
+    </div>
+
+    <script>
+    // Simple talent data
+    const talentData = {
+        warrior: {
+            name: "战士", color: "#C79C6E",
+            trees: [
+                { name: "武器", maxPoints: 49, talents: [
+                    { name: "Improved Heroic Strike", icon: "ability_rogue_ambush", maxRanks: 3, row: 0, col: 0 },
+                    { name: "Tactical Mastery", icon: "spell_nature_enchantarmor", maxRanks: 5, row: 0, col: 1 },
+                    { name: "Improved Rend", icon: "ability_gouge", maxRanks: 2, row: 0, col: 2 },
+                    { name: "Improved Charge", icon: "ability_warrior_charge", maxRanks: 2, row: 1, col: 0 },
+                    { name: "Deflection", icon: "ability_parry", maxRanks: 5, row: 1, col: 1 },
+                    { name: "Deep Wounds", icon: "ability_backstab", maxRanks: 3, row: 3, col: 0 }
+                ]},
+                { name: "狂暴", maxPoints: 55, talents: [
+                    { name: "Booming Voice", icon: "spell_nature_purge", maxRanks: 5, row: 0, col: 1 },
+                    { name: "Cruelty", icon: "ability_rogue_eviscerate", maxRanks: 5, row: 0, col: 2 },
+                    { name: "Bloodthirst", icon: "spell_nature_bloodlust", maxRanks: 1, row: 7, col: 1 }
+                ]},
+                { name: "防护", maxPoints: 53, talents: [
+                    { name: "Improved Bloodrage", icon: "ability_racial_bloodrage", maxRanks: 2, row: 0, col: 0 },
+                    { name: "Shield Specialization", icon: "inv_shield_06", maxRanks: 5, row: 0, col: 1 },
+                    { name: "Shield Slam", icon: "inv_shield_05", maxRanks: 1, row: 6, col: 0 }
+                ]}
+            ]
+        },
+        mage: {
+            name: "法师", color: "#40C7EB",
+            trees: [
+                { name: "奥术", maxPoints: 51, talents: [
+                    { name: "Arcane Focus", icon: "spell_holy_devotion", maxRanks: 5, row: 0, col: 0 },
+                    { name: "Presence of Mind", icon: "spell_holy_holybolt", maxRanks: 1, row: 2, col: 0 }
+                ]},
+                { name: "火焰", maxPoints: 51, talents: [
+                    { name: "Improved Fireball", icon: "spell_fire_flamebolt", maxRanks: 5, row: 0, col: 0 },
+                    { name: "Combustion", icon: "spell_fire_sealoffire", maxRanks: 1, row: 3, col: 0 }
+                ]},
+                { name: "冰霜", maxPoints: 51, talents: [
+                    { name: "Ice Block", icon: "spell_frost_frozenice", maxRanks: 1, row: 4, col: 0 }
+                ]}
+            ]
+        },
+        paladin: {
+            name: "圣骑士", color: "#F58CBA",
+            trees: [
+                { name: "神圣", maxPoints: 53, talents: [
+                    { name: "Divine Strength", icon: "ability_golemthunderclap", maxRanks: 5, row: 0, col: 0 },
+                    { name: "Illumination", icon: "spell_holy_greaterheal", maxRanks: 5, row: 3, col: 1 },
+                    { name: "Holy Shock", icon: "spell_holy_searinglight", maxRanks: 1, row: 4, col: 1 }
+                ]},
+                { name: "防护", maxPoints: 50, talents: [
+                    { name: "Shield Slam", icon: "inv_shield_05", maxRanks: 1, row: 6, col: 0 }
+                ]},
+                { name: "惩戒", maxPoints: 50, talents: [
+                    { name: "Vengeance", icon: "ability_racial_avatar", maxRanks: 5, row: 4, col: 0 },
+                    { name: "Repentance", icon: "spell_holy_prayerofhealing", maxRanks: 1, row: 5, col: 0 }
+                ]}
+            ]
+        },
+        hunter: {
+            name: "猎人", color: "#ABD473",
+            trees: [
+                { name: "野兽控制", maxPoints: 49, talents: [
+                    { name: "Ferocity", icon: "inv_misc_monsterclaw_04", maxRanks: 5, row: 3, col: 2 },
+                    { name: "Intimidation", icon: "ability_devour", maxRanks: 1, row: 4, col: 0 },
+                    { name: "Kill Command", icon: "ability_hunter_killcommand", maxRanks: 1, row: 4, col: 1 }
+                ]},
+                { name: "射击", maxPoints: 52, talents: [
+                    { name: "Trueshot Aura", icon: "ability_trueshot", maxRanks: 1, row: 5, col: 1 }
+                ]},
+                { name: "生存", maxPoints: 49, talents: [
+                    { name: "Deterrence", icon: "ability_whirlwind", maxRanks: 1, row: 3, col: 0 }
+                ]}
+            ]
+        },
+        rogue: {
+            name: "盗贼", color: "#FFF569",
+            trees: [
+                { name: "刺杀", maxPoints: 48, talents: [
+                    { name: "Cold Blood", icon: "spell_ice_lament", maxRanks: 1, row: 4, col: 2 }
+                ]},
+                { name: "战斗", maxPoints: 54, talents: [
+                    { name: "Adrenaline Rush", icon: "spell_shadow_shadowworddominate", maxRanks: 1, row: 6, col: 1 }
+                ]},
+                { name: "敏锐", maxPoints: 47, talents: [
+                    { name: "Preparation", icon: "spell_shadow_antishadow", maxRanks: 1, row: 4, col: 2 }
+                ]}
+            ]
+        },
+        priest: {
+            name: "牧师", color: "#FFFFFF",
+            trees: [
+                { name: "戒律", maxPoints: 49, talents: [
+                    { name: "Inner Focus", icon: "spell_frost_windwalkon", maxRanks: 1, row: 2, col: 2 }
+                ]},
+                { name: "神圣", maxPoints: 47, talents: [
+                    { name: "Holy Nova", icon: "spell_holy_holynova", maxRanks: 1, row: 2, col: 2 }
+                ]},
+                { name: "暗影", maxPoints: 50, talents: [
+                    { name: "Shadowform", icon: "spell_shadow_shadowform", maxRanks: 1, row: 5, col: 1 }
+                ]}
+            ]
+        },
+        shaman: {
+            name: "萨满", color: "#0070DE",
+            trees: [
+                { name: "元素", maxPoints: 48, talents: [
+                    { name: "Earthquake", icon: "spell_nature_earthquake", maxRanks: 1, row: 5, col: 1 }
+                ]},
+                { name: "增强", maxPoints: 48, talents: [
+                    { name: "Bloodlust", icon: "spell_nature_bloodlust", maxRanks: 1, row: 5, col: 1 }
+                ]},
+                { name: "恢复", maxPoints: 48, talents: [
+                    { name: "Spirit Link", icon: "spell_shaman_spiritlink", maxRanks: 1, row: 5, col: 1 }
+                ]}
+            ]
+        },
+        warlock: {
+            name: "术士", color: "#8787ED",
+            trees: [
+                { name: "痛苦", maxPoints: 47, talents: [
+                    { name: "Soul Link", icon: "spell_shadow_gathershadows", maxRanks: 1, row: 5, col: 2 }
+                ]},
+                { name: "恶魔", maxPoints: 48, talents: [
+                    { name: "Soul Link", icon: "spell_shadow_gathershadows", maxRanks: 1, row: 5, col: 2 }
+                ]},
+                { name: "毁灭", maxPoints: 51, talents: [
+                    { name: "Conflagrate", icon: "spell_fire_fireball", maxRanks: 1, row: 5, col: 1 }
+                ]}
+            ]
+        },
+        druid: {
+            name: "德鲁伊", color: "#FF7D0A",
+            trees: [
+                { name: "平衡", maxPoints: 53, talents: [
+                    { name: "Moonkin Form", icon: "spell_nature_forceofnature", maxRanks: 1, row: 4, col: 2 },
+                    { name: "Eclipse", icon: "ability_druid_eclipse", maxRanks: 1, row: 6, col: 1 }
+                ]},
+                { name: "野性战斗", maxPoints: 47, talents: [
+                    { name: "Berserk", icon: "ability_druid_berserk", maxRanks: 1, row: 4, col: 2 },
+                    { name: "Leader of the Pack", icon: "spell_nature_unyeildingstamina", maxRanks: 1, row: 5, col: 2 }
+                ]},
+                { name: "恢复", maxPoints: 56, talents: [
+                    { name: "Tree of Life Form", icon: "ability_druid_treeoflife", maxRanks: 1, row: 5, col: 1 }
+                ]}
+            ]
+        }
+    };
+    };
+
+    const classList = [
+        { id: 'warrior', name: '战士' },
+        { id: 'mage', name: '法师' },
+        { id: 'paladin', name: '圣骑士' },
+        { id: 'hunter', name: '猎人' },
+        { id: 'rogue', name: '盗贼' },
+        { id: 'priest', name: '牧师' },
+        { id: 'shaman', name: '萨满' },
+        { id: 'warlock', name: '术士' },
+        { id: 'druid', name: '德鲁伊' }
+];
+
+
+    let currentClass = null;
+    let allocatedTalents = {};
+
+    function init() {
+        const selector = document.getElementById('classSelector');
+        classList.forEach(cls => {
+            const btn = document.createElement('button');
+            btn.className = 'btn';
+            btn.textContent = cls.name;
+            btn.onclick = () => selectClass(cls.id);
+            selector.appendChild(btn);
+        });
+        console.log('Init done, buttons created:', selector.children.length);
+    }
+
+    function selectClass(className) {
+        console.log('Selecting class:', className);
+        currentClass = className;
+        allocatedTalents = {};
+        
+        const data = talentData[className];
+        document.getElementById('calculator').style.display = 'block';
+        document.getElementById('className').textContent = data.name;
+        document.getElementById('className').style.color = data.color;
+        
+        renderTrees(data);
+        updatePointsDisplay();
+    }
+
+    function renderTrees(data) {
+        const container = document.getElementById('treesContainer');
+        container.innerHTML = '';
+        
+        console.log('Rendering trees for:', data.name);
+        
+        data.trees.forEach((tree, treeIndex) => {
+            const treeDiv = document.createElement('div');
+            treeDiv.className = 'tree';
+            treeDiv.innerHTML = '<h3 style="color:' + data.color + '">' + tree.name + ' (' + tree.maxPoints + '点)</h3>';
+            
+            const grid = document.createElement('div');
+            grid.className = 'talent-grid';
+            
+            tree.talents.forEach((talent, talentIndex) => {
+                const key = treeIndex + '_' + talentIndex;
+                const rank = allocatedTalents[key] || 0;
+                const isAvailable = canAllocate(treeIndex, talentIndex, tree);
+                
+                const talentDiv = document.createElement('div');
+                talentDiv.className = 'talent' + (rank > 0 ? ' allocated' : '') + (!isAvailable ? ' unavailable' : '');
+                talentDiv.textContent = talent.name.substring(0, 12);
+                talentDiv.title = talent.name + ' (' + rank + '/' + talent.maxRanks + ')';
+                talentDiv.onclick = () => allocatePoint(treeIndex, talentIndex);
+                
+                grid.appendChild(talentDiv);
+            });
+            
+            treeDiv.appendChild(grid);
+            container.appendChild(treeDiv);
+        });
+        
+        console.log('Render complete');
+    }
+
+    function canAllocate(treeIndex, talentIndex, tree) {
+        const talent = tree.talents[talentIndex];
+        if (talent.row === 0) return true;
+        
+        for (let i = 0; i < tree.talents.length; i++) {
+            if (tree.talents[i].row === talent.row - 1) {
+                const key = treeIndex + '_' + i;
+                if ((allocatedTalents[key] || 0) >= 1) return true;
+            }
+        }
+        return false;
+    }
+
+    function allocatePoint(treeIndex, talentIndex) {
+        const data = talentData[currentClass];
+        const tree = data.trees[treeIndex];
+        const talent = tree.talents[talentIndex];
+        const key = treeIndex + '_' + talentIndex;
+        const currentRank = allocatedTalents[key] || 0;
+        
+        if (currentRank >= talent.maxRanks) return;
+        if (getTotalPointsSpent() >= 51) return;
+        if (!canAllocate(treeIndex, talentIndex, tree)) return;
+        
+        allocatedTalents[key] = currentRank + 1;
+        renderTrees(data);
+        updatePointsDisplay();
+    }
+
+    function getTotalPointsSpent() {
+        return Object.values(allocatedTalents).reduce((a, b) => a + b, 0);
+    }
+
+    function updatePointsDisplay() {
+        document.getElementById('pointsLeft').textContent = 51 - getTotalPointsSpent();
+    }
+
+    // Initialize
+    init();
+    </script>
+</body>
+</html>

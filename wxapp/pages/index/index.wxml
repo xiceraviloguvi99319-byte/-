@@ -1,0 +1,54 @@
+<view class="page">
+  <view class="header">
+    <text class="title">乌龟服天赋模拟器</text>
+    <text class="subtitle">剩余点数 {{pointsLeft}} / 51</text>
+  </view>
+
+  <scroll-view scroll-x class="class-scroll">
+    <view class="class-row">
+      <view
+        wx:for="{{classList}}"
+        wx:key="id"
+        wx:for-item="cls"
+        class="class-item {{cls.active ? 'active' : ''}}"
+        data-id="{{cls.id}}"
+        bindtap="onClassTap"
+      >
+        <image class="class-icon" src="{{cls.iconPath}}" mode="aspectFit" />
+        <text class="class-name">{{cls.name}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="current-class" style="color: {{currentClassColor}};">{{currentClassName}}</view>
+  <view class="help">点击图标加点，长按图标退点</view>
+
+  <view class="trees">
+    <view wx:for="{{treeViews}}" wx:key="treeIndex" wx:for-item="tree" class="tree-card">
+      <view class="tree-header">
+        <image class="tree-icon" src="{{tree.iconPath}}" mode="aspectFit" />
+        <view class="tree-meta">
+          <text class="tree-name">{{tree.name}}</text>
+          <text class="tree-points">{{tree.pointsSpent}} 点</text>
+        </view>
+      </view>
+
+      <view class="talent-grid">
+        <view
+          wx:for="{{tree.talents}}"
+          wx:key="talentKey"
+          wx:for-item="talent"
+          class="{{talent.stateClass}}"
+          style="{{talent.positionStyle}}"
+          data-tree="{{tree.treeIndex}}"
+          data-index="{{talent.talentIndex}}"
+          bindtap="onTalentTap"
+          bindlongpress="onTalentLongPress"
+        >
+          <image class="talent-icon" src="{{talent.iconPath}}" mode="aspectFill" />
+          <text class="talent-rank">{{talent.rankText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

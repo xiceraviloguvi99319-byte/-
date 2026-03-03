@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Talent Calculator</title>
+    <style>
+        body { background: #1a1a2e; color: #fff; font-family: Arial; margin: 0; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .class-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .class-btn { width: 50px; height: 50px; border: 2px solid #444; border-radius: 8px; cursor: pointer; background: #222; }
+        .class-btn:hover { border-color: #ffd700; }
+        .class-btn.active { border-color: #0f0; }
+        .class-btn img { width: 40px; height: 40px; margin: 3px; }
+        .info { display: flex; justify-content: center; gap: 30px; font-size: 18px; margin-bottom: 20px; }
+        .legend { max-width: 960px; margin: 0 auto 14px; color: #cfd4ef; font-size: 13px; line-height: 1.55; text-align: center; }
+        .trees { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+        .tree { background: #252540; padding: 15px; border-radius: 10px; width: 280px; }
+        .tree-header { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 2px solid #C79C6E; margin-bottom: 15px; }
+        .tree-header img { width: 32px; height: 32px; }
+        .tree-name { font-weight: bold; font-size: 16px; }
+        .tree-body { position: relative; width: 248px; margin: 0 auto; }
+        .talent-grid { display: grid; grid-template-columns: repeat(4, 56px); gap: 8px; justify-content: center; position: relative; z-index: 2; }
+        .talent-links { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 1; }
+        .talent-link { fill: none; stroke-width: 2; opacity: .95; }
+        .talent-link.locked { stroke: #5d6275; }
+        .talent-link.ready { stroke: #6ea8ff; }
+        .talent-link.active { stroke: #ffd700; }
+        .tree-points { margin-left: auto; color: #ffd700; font-size: 13px; }
+        .talent { width: 56px; height: 56px; background: #333; border: 2px solid #555; border-radius: 6px; cursor: pointer; position: relative; transition: transform .12s ease, border-color .12s ease, opacity .12s ease; }
+        .talent.available:hover { border-color: #ffd700; transform: scale(1.08); z-index: 10; }
+        .talent.locked { border-color: #4b4b4b; cursor: not-allowed; opacity: .8; }
+        .talent.allocated { border-color: #4CAF50; }
+        .talent.maxed { border-color: #ffd700; }
+        .talent img { width: 48px; height: 48px; margin: 2px; border-radius: 4px; filter: grayscale(100%) brightness(58%); }
+        .talent.allocated img { filter: none; }
+        .rank { position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.8); color: #4CAF50; font-size: 10px; padding: 1px 4px; border-radius: 3px; }
+        .talent.maxed .rank { color: #ffd700; }
+        .tip { position: fixed; z-index: 9999; pointer-events: none; background: rgba(8, 10, 20, 0.96); border: 1px solid #8a94c8; border-radius: 8px; padding: 8px 10px; width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,.45); display: none; }
+        .tip-title { color: #ffd700; font-weight: bold; margin-bottom: 4px; font-size: 13px; }
+        .tip-line { color: #d7dcf7; font-size: 12px; margin: 2px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏆 天赋模拟器</h1>
+    </div>
+    <div class="class-row" id="classSelector"></div>
+    <div class="info">
+        <span>剩余点数: <b id="pointsLeft" style="color:#ffd700">51</b></span>
+    </div>
+    <div class="legend">
+        左键加点，右键退点。灰色图标表示未激活，点亮表示已学习。连线箭头：灰色=前置未满足，蓝色=前置已满足，金色=该后置已学习。
+    </div>
+    <div class="trees" id="treesContainer"></div>
+    <div class="tip" id="talentTip"></div>
+
+    <script src="talent_data_official_full.js?v=20260228a"></script>
+    <script>
+    var data = {
+        warrior: { name: "战士", color: "#C79C6E", trees: [
+            { name: "Arms", nameCn: "武器", icon: "inv_sword_27", talents: [
+                {n:"Improved Heroic Strike",i:"ability_rogue_ambush",m:3,r:0,c:0},
+                {n:"Tactical Mastery",i:"spell_nature_enchantarmor",m:5,r:0,c:1},
+                {n:"Improved Rend",i:"ability_gouge",m:2,r:0,c:2},
+                {n:"Improved Charge",i:"ability_warrior_charge",m:2,r:1,c:0},
+                {n:"Deflection",i:"ability_parry",m:5,r:1,c:1},
+                {n:"Improved Thunder Clap",i:"ability_thunderclap",m:3,r:2,c:0},
+                {n:"Master Strike",i:"master_strike_1",m:1,r:2,c:1},
+                {n:"Improved Overpower",i:"inv_sword_05",m:2,r:2,c:2},
+                {n:"Deep Wounds",i:"ability_backstab",m:3,r:3,c:0},
+                {n:"Two-Handed",i:"inv_axe_09",m:3,r:4,c:0},
+                {n:"Impale",i:"ability_searingarrow",m:2,r:4,c:1},
+                {n:"Sweeping Strikes",i:"ability_rogue_slicedice",m:1,r:5,c:0},
+                {n:"Precision Cut",i:"ability_hunter_swiftstrike",m:3,r:5,c:1},
+                {n:"Mortal Strike",i:"ability_warrior_savageblow",m:1,r:7,c:0}
+            ]},
+            { name: "Fury", nameCn: "狂暴", icon: "ability_warrior_battleshout", talents: [
+                {n:"Booming Voice",i:"spell_nature_purge",m:5,r:0,c:1},
+                {n:"Cruelty",i:"ability_rogue_eviscerate",m:5,r:0,c:2},
+                {n:"Dual Wield",i:"ability_dualwield",m:5,r:1,c:1},
+                {n:"Unbridled Wrath",i:"spell_nature_stoneclawtotem",m:5,r:1,c:2},
+                {n:"Improved Shouts",i:"ability_warrior_commandingshout",m:5,r:2,c:1},
+                {n:"Piercing Howl",i:"spell_shadow_deathscream",m:1,r:2,c:2},
+                {n:"Blood Craze",i:"spell_shadow_summonimp",m:3,r:3,c:0},
+                {n:"Enrage",i:"spell_shadow_unholyfrenzy",m:5,r:3,c:2},
+                {n:"Death Wish",i:"spell_shadow_deathpact",m:1,r:4,c:2},
+                {n:"Flurry",i:"ability_ghoulfrenzy",m:5,r:5,c:2},
+                {n:"Bloodthirst",i:"spell_nature_bloodlust",m:1,r:7,c:1}
+            ]},
+            { name: "Protection", nameCn: "防护", icon: "inv_shield_06", talents: [
+                {n:"Improved Bloodrage",i:"ability_racial_bloodrage",m:2,r:0,c:0},
+                {n:"Shield Spec",i:"inv_shield_06",m:5,r:0,c:1},
+                {n:"Anticipation",i:"spell_nature_mirrorimage",m:3,r:0,c:2},
+                {n:"Iron Will",i:"spell_magic_magearmor",m:5,r:1,c:0},
+                {n:"Toughness",i:"spell_holy_devotion",m:5,r:1,c:1},
+                {n:"Last Stand",i:"spell_holy_ashestoashes",m:1,r:2,c:0},
+                {n:"Improved Revenge",i:"ability_warrior_revenge",m:3,r:3,c:0},
+                {n:"Defiance",i:"ability_warrior_innerrage",m:5,r:4,c:0},
+                {n:"Shield Slam",i:"inv_shield_05",m:1,r:6,c:0},
+                {n:"Concussion Blow",i:"ability_thunderbolt",m:1,r:7,c:2}
+            ]}
+        ]},
+        paladin: { name: "圣骑士", color: "#F58CBA", trees: [
+            { name: "Holy", nameCn: "神圣", icon: "spell_holy_holybolt", talents: [
+                {n:"Divine Strength",i:"ability_golemthunderclap",m:5,r:0,c:0},
+                {n:"Illumination",i:"spell_holy_greaterheal",m:5,r:3,c:1},
+                {n:"Holy Shock",i:"spell_holy_searinglight",m:1,r:4,c:1}
+            ]},
+            { name: "Protection", nameCn: "防护", icon: "spell_holy_devotionaura", talents: [
+                {n:"Shield Slam",i:"inv_shield_05",m:1,r:6,c:0}
+            ]},
+            { name: "Retribution", nameCn: "惩戒", icon: "spell_holy_auraoflight", talents: [
+                {n:"Vengeance",i:"ability_racial_avatar",m:5,r:4,c:0}
+            ]}
+        ]},
+        mage: { name: "法师", color: "#40C7EB", trees: [
+            { name: "Arcane", nameCn: "奥术", icon: "spell_nature_wispsplode", talents: [
+                {n:"Arcane Focus",i:"spell_holy_devotion",m:5,r:1,c:1},
+                {n:"Arcane Power",i:"spell_nature_lightning",m:1,r:6,c:1}
+            ]},
+            { name: "Fire", nameCn: "火焰", icon: "spell_fire_fire", talents: [
+                {n:"Combustion",i:"spell_fire_sealoffire",m:1,r:5,c:1}
+            ]},
+            { name: "Frost", nameCn: "冰霜", icon: "spell_frost_freezingbreath", talents: [
+                {n:"Ice Block",i:"spell_frost_frost",m:1,r:4,c:1}
+            ]}
+        ]},
+        hunter: { name: "猎人", color: "#ABD473", trees: [
+            { name: "Beast Mastery", nameCn: "野兽控制", icon: "ability_hunter_beasttaming", talents: [
+                {n:"Ferocity",i:"inv_misc_monsterclaw_04",m:5,r:3,c:2},
+                {n:"Intimidation",i:"ability_devour",m:1,r:4,c:0},
+                {n:"Kill Command",i:"ability_hunter_killcommand",m:1,r:4,c:1},
+                {n:"Frenzy",i:"inv_misc_monsterclaw_03",m:5,r:5,c:1}
+            ]},
+            { name: "Marksmanship", nameCn: "射击", icon: "ability_marksmanship", talents: [
+                {n:"Trueshot Aura",i:"ability_trueshot",m:1,r:5,c:1}
+            ]},
+            { name: "Survival", nameCn: "生存", icon: "ability_hunter_swiftstrike", talents: [
+                {n:"Deterrence",i:"ability_whirlwind",m:1,r:3,c:0}
+            ]}
+        ]},
+        rogue: { name: "盗贼", color: "#FFF569", trees: [
+            { name: "Assassination", nameCn: "刺杀", icon: "ability_rogue_garrote", talents: [
+                {n:"Cold Blood",i:"spell_ice_lament",m:1,r:4,c:2}
+            ]},
+            { name: "Combat", nameCn: "战斗", icon: "inv_weapon_shortblade_14", talents: [
+                {n:"Adrenaline Rush",i:"spell_shadow_shadowworddominate",m:1,r:6,c:1}
+            ]},
+            { name: "Subtlety", nameCn: "敏锐", icon: "ability_ambush", talents: [
+                {n:"Preparation",i:"spell_shadow_antishadow",m:1,r:4,c:2}
+            ]}
+        ]},
+        priest: { name: "牧师", color: "#FFFFFF", trees: [
+            { name: "Discipline", nameCn: "戒律", icon: "spell_holy_auraoflight", talents: [
+                {n:"Inner Focus",i:"spell_frost_windwalkon",m:1,r:2,c:2}
+            ]},
+            { name: "Holy", nameCn: "神圣", icon: "spell_holy_layonhands", talents: [
+                {n:"Holy Nova",i:"spell_holy_holynova",m:1,r:2,c:2}
+            ]},
+            { name: "Shadow", nameCn: "暗影", icon: "spell_shadow_possession", talents: [
+                {n:"Shadowform",i:"spell_shadow_shadowform",m:1,r:5,c:1}
+            ]}
+        ]},
+        shaman: { name: "萨满", color: "#0070DE", trees: [
+            { name: "Elemental", nameCn: "元素", icon: "spell_fire_volcano", talents: [
+                {n:"Earthquake",i:"spell_nature_earthquake",m:1,r:5,c:1}
+            ]},
+            { name: "Enhancement", nameCn: "增强", icon: "spell_nature_unyeildingstamina", talents: [
+                {n:"Bloodlust",i:"spell_nature_bloodlust",m:1,r:5,c:1}
+            ]},
+            { name: "Restoration", nameCn: "恢复", icon: "spell_nature_healingwavegreater", talents: [
+                {n:"Spirit Link",i:"spell_shaman_spiritlink",m:1,r:5,c:1}
+            ]}
+        ]},
+        warlock: { name: "术士", color: "#8787ED", trees: [
+            { name: "Affliction", nameCn: "痛苦", icon: "spell_shadow_unsummonbuilding", talents: [
+                {n:"Soul Link",i:"spell_shadow_gathershadows",m:1,r:5,c:2}
+            ]},
+            { name: "Demonology", nameCn: "恶魔", icon: "spell_shadow_curseoftounges", talents: [
+                {n:"Soul Link",i:"spell_shadow_gathershadows",m:1,r:5,c:2}
+            ]},
+            { name: "Destruction", nameCn: "毁灭", icon: "spell_fire_incinerate", talents: [
+                {n:"Conflagrate",i:"spell_fire_fireball",m:1,r:5,c:1}
+            ]}
+        ]},
+        druid: { name: "德鲁伊", color: "#FF7D0A", trees: [
+            { name: "Balance", nameCn: "平衡", icon: "spell_nature_lightning", talents: [
+                {n:"Moonkin Form",i:"spell_nature_forceofnature",m:1,r:4,c:2},
+                {n:"Eclipse",i:"ability_druid_eclipse",m:1,r:6,c:1}
+            ]},
+            { name: "Feral Combat", nameCn: "野性战斗", icon: "ability_physical_taunt", talents: [
+                {n:"Berserk",i:"ability_druid_berserk",m:1,r:4,c:2},
+                {n:"Leader of the Pack",i:"spell_nature_unyeildingstamina",m:1,r:5,c:2}
+            ]},
+            { name: "Restoration", nameCn: "恢复", icon: "spell_nature_healingtouch", talents: [
+                {n:"Tree of Life Form",i:"ability_druid_treeoflife",m:1,r:5,c:1}
+            ]}
+        ]}
+    };
+
+    if (window.TALENT_DATA) data = window.TALENT_DATA;
+
+    var list = window.TALENT_CLASS_LIST || [
+        {id:'warrior',n:'战士',icon:'class_warrior'},
+        {id:'paladin',n:'圣骑士',icon:'class_paladin'},
+        {id:'mage',n:'法师',icon:'class_mage'},
+        {id:'hunter',n:'猎人',icon:'class_hunter'},
+        {id:'rogue',n:'盗贼',icon:'class_rogue'},
+        {id:'priest',n:'牧师',icon:'class_priest'},
+        {id:'shaman',n:'萨满',icon:'class_shaman'},
+        {id:'warlock',n:'术士',icon:'class_warlock'},
+        {id:'druid',n:'德鲁伊',icon:'class_druid'}
+    ];
+
+    var current = null;
+    var points = {};
+    var MAX_POINTS = 51;
+    var GRID_COLS = 4;
+    var CELL_SIZE = 56;
+    var CELL_GAP = 8;
+    var ICON_BASE_LOCAL = 'icons/';
+    var ICON_BASE_REMOTE = 'https://talents.turtlecraft.gg/icons/';
+
+    function iconUrl(iconName, remote) {
+        return (remote ? ICON_BASE_REMOTE : ICON_BASE_LOCAL) + iconName + '.png';
+    }
+
+    function iconError(img) {
+        var icon = img.getAttribute('data-icon') || 'inv_misc_questionmark';
+        var stage = img.getAttribute('data-fallback') || '';
+
+        if (stage === '') {
+            img.setAttribute('data-fallback', 'remote');
+            img.src = iconUrl(icon, true);
+            return;
+        }
+
+        if (stage === 'remote' && icon !== 'inv_misc_questionmark') {
+            img.setAttribute('data-fallback', 'question');
+            img.setAttribute('data-icon', 'inv_misc_questionmark');
+            img.src = iconUrl('inv_misc_questionmark', true);
+            return;
+        }
+
+        img.onerror = null;
+    }
+
+    function talentId(t) {
+        if (typeof t.id === 'number') return t.id;
+        return t.r * 4 + t.c;
+    }
+
+    function pointKey(classId, treeIndex, t) {
+        return classId + ':' + treeIndex + ':' + talentId(t);
+    }
+
+    function getClassData(classId) {
+        return data[classId] || data.warrior;
+    }
+
+    function getRank(classId, treeIndex, t) {
+        return points[pointKey(classId, treeIndex, t)] || 0;
+    }
+
+    function getClassSpent(classId) {
+        var d = getClassData(classId);
+        var total = 0;
+        d.trees.forEach(function(tr, treeIndex) {
+            tr.talents.forEach(function(t) {
+                total += getRank(classId, treeIndex, t);
+            });
+        });
+        return total;
+    }
+
+    function getTreeSpent(classId, treeIndex) {
+        var d = getClassData(classId);
+        var tr = d.trees[treeIndex];
+        if (!tr) return 0;
+        var total = 0;
+        tr.talents.forEach(function(t) {
+            total += getRank(classId, treeIndex, t);
+        });
+        return total;
+    }
+
+    function findTalentById(tree, id) {
+        for (var i = 0; i < tree.talents.length; i++) {
+            if (talentId(tree.talents[i]) === id) return tree.talents[i];
+        }
+        return null;
+    }
+
+    function getBlockedReason(classId, d, treeIndex, t, classSpent, treeSpent) {
+        var rank = getRank(classId, treeIndex, t);
+        if (rank >= t.m) return '该天赋已满级';
+        if (classSpent >= MAX_POINTS) return '总点数已达到上限';
+
+        var needInTree = t.r * 5;
+        if (treeSpent < needInTree) return '需要本系先投入 ' + needInTree + ' 点';
+
+        if (typeof t.req === 'number') {
+            var tree = d.trees[treeIndex];
+            var reqTalent = findTalentById(tree, t.req);
+            var reqNeed = (typeof t.reqRanks === 'number' && t.reqRanks > 0) ? t.reqRanks : 1;
+            var reqRank = reqTalent ? getRank(classId, treeIndex, reqTalent) : 0;
+            if (reqRank < reqNeed) {
+                var reqName = reqTalent ? reqTalent.n : ('前置天赋#' + t.req);
+                return '需要前置「' + reqName + '」达到 ' + reqNeed + ' 点';
+            }
+        }
+
+        return null;
+    }
+
+    function isBuildValid(classId) {
+        var d = getClassData(classId);
+        if (getClassSpent(classId) > MAX_POINTS) return false;
+
+        for (var treeIndex = 0; treeIndex < d.trees.length; treeIndex++) {
+            var tree = d.trees[treeIndex];
+            var treeSpent = getTreeSpent(classId, treeIndex);
+
+            for (var i = 0; i < tree.talents.length; i++) {
+                var t = tree.talents[i];
+                var rank = getRank(classId, treeIndex, t);
+                if (rank <= 0) continue;
+
+                if (treeSpent < t.r * 5) return false;
+
+                if (typeof t.req === 'number') {
+                    var reqTalent = findTalentById(tree, t.req);
+                    if (!reqTalent) return false;
+                    var reqNeed = (typeof t.reqRanks === 'number' && t.reqRanks > 0) ? t.reqRanks : 1;
+                    if (getRank(classId, treeIndex, reqTalent) < reqNeed) return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    function buildLinkPath(fromX, fromY, toX, toY) {
+        var midY = fromY + (toY - fromY) / 2;
+        return 'M ' + fromX + ' ' + fromY + ' L ' + fromX + ' ' + midY + ' L ' + toX + ' ' + midY + ' L ' + toX + ' ' + toY;
+    }
+
+    function drawDependencyLines(svg, classId, treeIndex, tr, rows) {
+        var width = GRID_COLS * CELL_SIZE + (GRID_COLS - 1) * CELL_GAP;
+        var height = rows * CELL_SIZE + (rows - 1) * CELL_GAP;
+        svg.setAttribute('width', width);
+        svg.setAttribute('height', height);
+        svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+        svg.innerHTML = '';
+
+        var markerPrefix = classId + '-' + treeIndex;
+        var markerLocked = 'arrow-locked-' + markerPrefix;
+        var markerReady = 'arrow-ready-' + markerPrefix;
+        var markerActive = 'arrow-active-' + markerPrefix;
+
+        var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        defs.innerHTML = [
+            '<marker id="' + markerLocked + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5d6275"/></marker>',
+            '<marker id="' + markerReady + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6ea8ff"/></marker>',
+            '<marker id="' + markerActive + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#ffd700"/></marker>'
+        ].join('');
+        svg.appendChild(defs);
+
+        tr.talents.forEach(function(t) {
+            if (typeof t.req !== 'number') return;
+            var reqTalent = findTalentById(tr, t.req);
+            if (!reqTalent) return;
+
+            var reqNeed = (typeof t.reqRanks === 'number' && t.reqRanks > 0) ? t.reqRanks : 1;
+            var reqRank = getRank(classId, treeIndex, reqTalent);
+            var tarRank = getRank(classId, treeIndex, t);
+
+            var sx = reqTalent.c * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2;
+            var sy = reqTalent.r * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2;
+            var tx = t.c * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2;
+            var ty = t.r * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2;
+
+            var state = 'locked';
+            if (tarRank > 0) state = 'active';
+            else if (reqRank >= reqNeed) state = 'ready';
+
+            var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            p.setAttribute('class', 'talent-link ' + state);
+            p.setAttribute('d', buildLinkPath(sx, sy, tx, ty));
+            if (state === 'active') p.setAttribute('marker-end', 'url(#' + markerActive + ')');
+            else if (state === 'ready') p.setAttribute('marker-end', 'url(#' + markerReady + ')');
+            else p.setAttribute('marker-end', 'url(#' + markerLocked + ')');
+            svg.appendChild(p);
+        });
+    }
+
+    function getTalentStatusLabel(classId, d, treeIndex, t, classSpent, treeSpent) {
+        var rank = getRank(classId, treeIndex, t);
+        if (rank >= t.m) return '已满级';
+        var blockedReason = getBlockedReason(classId, d, treeIndex, t, classSpent, treeSpent);
+        return blockedReason ? '未解锁' : '可学习';
+    }
+
+    function getUnlockRuleText(tree, t) {
+        var needInTree = t.r * 5;
+        var parts = [];
+        if (needInTree > 0) parts.push('本系投入 ' + needInTree + ' 点');
+
+        if (typeof t.req === 'number') {
+            var reqTalent = findTalentById(tree, t.req);
+            var reqNeed = (typeof t.reqRanks === 'number' && t.reqRanks > 0) ? t.reqRanks : 1;
+            if (reqTalent) parts.push('前置「' + reqTalent.n + '」' + reqNeed + ' 点');
+            else parts.push('前置天赋 #' + t.req + '（' + reqNeed + ' 点）');
+        }
+
+        if (!parts.length) return '无前置要求';
+        return parts.join('；');
+    }
+
+    function getTalentDesc(t) {
+        if (!t) return "";
+        var s = t.descCn || t.desc || t.description || t.tooltip || "";
+        return String(s).trim();
+    }
+
+    function showTalentTip(e, classId, d, treeIndex, tr, t) {
+        var tip = document.getElementById('talentTip');
+        if (!tip) return;
+
+        var rank = getRank(classId, treeIndex, t);
+        var classSpent = getClassSpent(classId);
+        var treeSpent = getTreeSpent(classId, treeIndex);
+        var blockedReason = getBlockedReason(classId, d, treeIndex, t, classSpent, treeSpent);
+        var status = getTalentStatusLabel(classId, d, treeIndex, t, classSpent, treeSpent);
+        var unlockRule = getUnlockRuleText(tr, t);
+
+        tip.innerHTML = ''
+            + '<div class="tip-title">' + t.n + '</div>'
+            + '<div class="tip-line">等级：' + rank + ' / ' + t.m + '</div>'
+            + '<div class="tip-line">状态：' + status + '</div>'
+            + '<div class="tip-line">技能说明：' + (getTalentDesc(t) || '暂无说明') + '</div>'
+            + '<div class="tip-line">解锁条件：' + unlockRule + '</div>'
+            + '<div class="tip-line">当前限制：' + (blockedReason || '无') + '</div>';
+        tip.style.display = 'block';
+        moveTalentTip(e);
+    }
+
+    function moveTalentTip(e) {
+        var tip = document.getElementById('talentTip');
+        if (!tip || tip.style.display === 'none') return;
+
+        var pad = 14;
+        var x = e.clientX + pad;
+        var y = e.clientY + pad;
+        var w = tip.offsetWidth || 260;
+        var h = tip.offsetHeight || 120;
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+
+        if (x + w + 8 > vw) x = e.clientX - w - pad;
+        if (y + h + 8 > vh) y = e.clientY - h - pad;
+        if (x < 8) x = 8;
+        if (y < 8) y = 8;
+
+        tip.style.left = x + 'px';
+        tip.style.top = y + 'px';
+    }
+
+    function hideTalentTip() {
+        var tip = document.getElementById('talentTip');
+        if (!tip) return;
+        tip.style.display = 'none';
+    }
+
+    function init() {
+        var s = document.getElementById('classSelector');
+        list.forEach(function(x) {
+            var b = document.createElement('div');
+            b.className = 'class-btn';
+            b.innerHTML = '<img data-icon="'+x.icon+'" src="'+iconUrl(x.icon, false)+'" onerror="iconError(this)">';
+            b.onclick = function() { show(x.id); };
+            s.appendChild(b);
+        });
+        if (list.length) show(list[0].id);
+    }
+
+    function show(id) {
+        if (id !== current) points = {};
+        current = id;
+        document.querySelectorAll('.class-btn').forEach(function(b, i) {
+            b.classList.toggle('active', list[i].id === id);
+        });
+        var d = getClassData(id);
+        var classSpent = getClassSpent(id);
+        var c = document.getElementById('treesContainer');
+        c.innerHTML = '';
+        d.trees.forEach(function(tr, treeIndex) {
+            var tree = document.createElement('div');
+            tree.className = 'tree';
+            var treeSpent = getTreeSpent(id, treeIndex);
+            tree.innerHTML = '<div class="tree-header"><img data-icon="'+tr.icon+'" src="'+iconUrl(tr.icon, false)+'" onerror="iconError(this)"><span class="tree-name">'+tr.nameCn+'</span><span class="tree-points">'+treeSpent+'</span></div><div class="tree-body"><svg class="talent-links"></svg><div class="talent-grid"></div></div>';
+            var linksSvg = tree.querySelector('.talent-links');
+            var g = tree.querySelector('.talent-grid');
+            var maxR = 0;
+            tr.talents.forEach(function(t) { if (t.r > maxR) maxR = t.r; });
+            for (var r = 0; r <= maxR; r++) {
+                for (var ccol = 0; ccol < 4; ccol++) {
+                    var t = tr.talents.find(function(x) { return x.r === r && x.c === ccol; });
+                    if (t) {
+                        var cell = document.createElement('div');
+                        var rank = getRank(id, treeIndex, t);
+                        var blockedReason = getBlockedReason(id, d, treeIndex, t, classSpent, treeSpent);
+                        var iconName = t.i || t.icon || 'inv_misc_questionmark';
+                        var talentDesc = getTalentDesc(t);
+                        cell.className = 'talent' + (blockedReason ? ' locked' : ' available') + (rank > 0 ? ' allocated' : '') + (rank >= t.m ? ' maxed' : '');
+                        cell.innerHTML = '<img data-icon="'+iconName+'" src="'+iconUrl(iconName, false)+'" onerror="iconError(this)"><span class="rank">'+rank+'/'+t.m+'</span>';
+                        cell.title = (blockedReason ? (t.n + ': ' + blockedReason) : t.n) + (talentDesc ? ('\n' + talentDesc) : '');
+                        (function(treeIdx, talentObj) {
+                            cell.onclick = function() { alloc(treeIdx, talentObj); };
+                            cell.oncontextmenu = function(e) {
+                                e.preventDefault();
+                                dealloc(treeIdx, talentObj);
+                                return false;
+                            };
+                            cell.onmouseenter = function(e) { showTalentTip(e, id, d, treeIdx, tr, talentObj); };
+                            cell.onmousemove = moveTalentTip;
+                            cell.onmouseleave = hideTalentTip;
+                        })(treeIndex, t);
+                        g.appendChild(cell);
+                    } else {
+                        var empty = document.createElement('div');
+                        empty.style.width = '56px';
+                        empty.style.height = '56px';
+                        g.appendChild(empty);
+                    }
+                }
+            }
+            drawDependencyLines(linksSvg, id, treeIndex, tr, maxR + 1);
+            c.appendChild(tree);
+        });
+        document.getElementById('pointsLeft').textContent = MAX_POINTS - classSpent;
+    }
+
+    function alloc(treeIndex, t) {
+        if (!current) return;
+        var d = getClassData(current);
+        var classSpent = getClassSpent(current);
+        var treeSpent = getTreeSpent(current, treeIndex);
+        var blockedReason = getBlockedReason(current, d, treeIndex, t, classSpent, treeSpent);
+        if (blockedReason) return;
+
+        var key = pointKey(current, treeIndex, t);
+        points[key] = (points[key] || 0) + 1;
+        if (points[key] > t.m) points[key] = t.m;
+        show(current);
+    }
+
+    function dealloc(treeIndex, t) {
+        if (!current) return;
+        var key = pointKey(current, treeIndex, t);
+        var oldRank = points[key] || 0;
+        if (oldRank <= 0) return;
+
+        points[key] = oldRank - 1;
+        if (points[key] <= 0) delete points[key];
+
+        if (!isBuildValid(current)) {
+            points[key] = oldRank;
+            return;
+        }
+
+        show(current);
+    }
+
+    init();
+    </script>
+</body>
+</html>
