@@ -6,6 +6,7 @@
 - GitHub Actions workflow: `.github/workflows/h5-deploy-aliyun.yml`
 - Server bootstrap script: `deploy/server/bootstrap_nginx.sh`
 - Nginx site config template: `deploy/server/nginx.turtle-talents.conf`
+- One-time bootstrap with CI key: `deploy/server/first_bootstrap_with_ci_key.sh`
 
 ## Local build
 ```bash
@@ -42,6 +43,12 @@ bash deploy/server/bootstrap_nginx.sh
 
 After bootstrap, website root is:
 - `/var/www/turtle-talents/current`
+
+If you want fully zero-config CI auth, run this script once instead:
+```bash
+bash deploy/server/first_bootstrap_with_ci_key.sh
+```
+It installs nginx and also injects CI public key into `/root/.ssh/authorized_keys`.
 
 ## Permissions you need to provide
 1. GitHub repo admin access to set Actions secret `ALIYUN_SSH_KEY`.
